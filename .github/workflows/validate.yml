@@ -1,0 +1,27 @@
+name: Validate Pitch GM
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check embedded game JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const vm=require('vm');
+          const html=fs.readFileSync('index.html','utf8');
+          const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+          if(!scripts.length)throw new Error('No game scripts found');
+          scripts.forEach((s,i)=>new vm.Script(s[1],{filename:'inline-'+i+'.js'}));
+          for(const name of ['predraft','regular_season','postseason','season_complete','boardConfidence','portrait','newJob'])if(!html.includes(name))throw new Error('Missing '+name);
+          console.log('Syntax and critical feature checks passed');
+          NODE
